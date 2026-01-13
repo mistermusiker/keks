@@ -1,0 +1,36 @@
+# WordPress
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Local settings
+.claude/settings.local.json
+
+# Node modules (falls später verwendet)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build files (falls später verwendet)
+dist/
+build/
+
+# Logs
+*.log
