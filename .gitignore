@@ -21,7 +21,7 @@ Thumbs.db
 Icon
 
 # Local settings
-.claude/settings.local.json
+.claude/
 
 # Node modules (falls später verwendet)
 node_modules/
