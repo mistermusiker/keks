@@ -1,0 +1,37 @@
+name: Build & Release Plugin ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build plugin ZIP
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p build/keks
+          rsync -a \
+            --exclude='.git' --exclude='.github' --exclude='.gitignore' \
+            --exclude='.claude' --exclude='.cursor' --exclude='.DS_Store' \
+            --exclude='GITHUB_SETUP.md' --exclude='README.md' --exclude='build' \
+            ./ build/keks/
+          cd build && zip -r "keks-${VERSION}.zip" keks
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            "build/keks-${VERSION}.zip" \
+            --title "Keks ${VERSION}" \
+            --notes "Keks Cookie Banner ${VERSION}. ZIP über WordPress → Plugins → Installieren → Plugin hochladen einspielen."

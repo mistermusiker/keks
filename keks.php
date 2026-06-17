@@ -5,6 +5,7 @@
  * Description: Simple, GDPR-compliant cookie banner without dark patterns.
  * Version: 1.0.0
  * Author: Roger Kirchhoff
+ * Author URI: https://grp.solutions
  * License: GPL v2 or later
  * Text Domain: keks
  */
@@ -515,21 +516,23 @@ class Keks {
         // Upgrade von 1.0 auf 1.1: ip_hash -> ip_address
         if (version_compare($current_version, '1.1', '<')) {
             global $wpdb;
-            $table = $wpdb->prefix . 'keks_consent_log';
+            $table_name = 'keks_consent_log';
+            $table = $wpdb->prefix . $table_name;
 
-            // Prüfen ob Tabelle existiert
-            if ($wpdb->get_var("SHOW TABLES LIKE '$table'") === $table) {
+            // Prüfen ob Tabelle existiert (Tabellennamen sicher escapen)
+            $table_escaped = esc_sql($table);
+            if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) === $table) {
                 // Prüfen ob alte Spalte ip_hash existiert
-                $columns = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'ip_hash'");
+                $columns = $wpdb->get_results($wpdb->prepare("SHOW COLUMNS FROM `{$table_escaped}` LIKE %s", 'ip_hash'));
                 if (!empty($columns)) {
                     // Spalte umbenennen
-                    $wpdb->query("ALTER TABLE $table CHANGE `ip_hash` `ip_address` VARCHAR(45) NOT NULL");
+                    $wpdb->query("ALTER TABLE `{$table_escaped}` CHANGE `ip_hash` `ip_address` VARCHAR(45) NOT NULL");
                 }
 
                 // Prüfen ob ip_address existiert, sonst hinzufügen
-                $columns = $wpdb->get_results("SHOW COLUMNS FROM $table LIKE 'ip_address'");
+                $columns = $wpdb->get_results($wpdb->prepare("SHOW COLUMNS FROM `{$table_escaped}` LIKE %s", 'ip_address'));
                 if (empty($columns)) {
-                    $wpdb->query("ALTER TABLE $table ADD `ip_address` VARCHAR(45) NOT NULL AFTER `created_at`");
+                    $wpdb->query("ALTER TABLE `{$table_escaped}` ADD `ip_address` VARCHAR(45) NOT NULL AFTER `created_at`");
                 }
             }
 
@@ -542,40 +545,45 @@ class Keks {
      */
     public function ajax_log_consent() {
         // Nonce prüfen
-        if (!wp_verify_nonce($_POST['nonce'] ?? '', 'keks_consent_nonce')) {
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        if (!isset($_POST['nonce']) || !wp_verify_nonce(wp_unslash($_POST['nonce']), 'keks_consent_nonce')) {
             wp_send_json_error(['message' => 'Invalid nonce'], 403);
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'keks_consent_log';
+        $table_name = 'keks_consent_log';
+        $table = $wpdb->prefix . $table_name;
+        $table_escaped = esc_sql($table);
 
         // Prüfen ob Tabelle existiert
-        if ($wpdb->get_var("SHOW TABLES LIKE '$table'") !== $table) {
+        if ($wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) !== $table) {
             wp_send_json_error(['message' => 'Table not found'], 500);
         }
 
         // Daten validieren
-        $consent_id = sanitize_text_field($_POST['consent_id'] ?? '');
-        $action = sanitize_key($_POST['consent_action'] ?? '');
-        $categories = json_decode(stripslashes($_POST['categories'] ?? '{}'), true);
-        $url = esc_url_raw($_POST['url'] ?? '');
+        $consent_id = sanitize_text_field(wp_unslash($_POST['consent_id'] ?? ''));
+        $action = sanitize_key(wp_unslash($_POST['consent_action'] ?? ''));
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        $categories = json_decode(stripslashes(wp_unslash($_POST['categories'] ?? '{}')), true);
+        $url = esc_url_raw(wp_unslash($_POST['url'] ?? ''));
 
         if (!in_array($action, ['accept_all', 'reject_all', 'custom', 'revoke'])) {
             wp_send_json_error(['message' => 'Invalid action'], 400);
         }
 
         // IP-Adresse speichern (für DSGVO-Nachweis)
-        $raw_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $raw_ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '';
         $ip_hash_only = get_option('keks_ip_hash_only', '0') === '1';
         $ip_address = $ip_hash_only ? hash('sha256', $raw_ip . wp_salt()) : $raw_ip;
 
+        $user_agent = isset($_SERVER['HTTP_USER_AGENT']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_USER_AGENT'])) : '';
         $wpdb->insert(
             $table,
             [
                 'consent_id' => $consent_id ?: wp_generate_uuid4(),
                 'created_at' => current_time('mysql'),
                 'ip_address' => $ip_address,
-                'user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 512),
+                'user_agent' => substr($user_agent, 0, 512),
                 'url' => $url,
                 'action' => $action,
                 'categories' => wp_json_encode($categories),
@@ -716,7 +724,8 @@ class Keks {
     public function save_meta_box($post_id) {
         // Nonce prüfen
         if (!isset($_POST['keks_meta_box_nonce']) ||
-            !wp_verify_nonce($_POST['keks_meta_box_nonce'], 'keks_meta_box')) {
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+            !wp_verify_nonce(wp_unslash($_POST['keks_meta_box_nonce']), 'keks_meta_box')) {
             return;
         }
 
@@ -821,23 +830,41 @@ class Keks {
     }
 
     public function register_settings() {
-        register_setting('keks_settings', 'keks_plugin_enabled');
-        register_setting('keks_settings', 'keks_banner_text');
+        register_setting('keks_settings', 'keks_plugin_enabled', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+        register_setting('keks_settings', 'keks_banner_text', [
+            'sanitize_callback' => 'wp_kses_post',
+        ]);
 
         // Seiten-Einstellungen (eigene Gruppe, um Datenverlust zu vermeiden)
-        register_setting('keks_pages', 'keks_privacy_page_id');
-        register_setting('keks_pages', 'keks_imprint_page_id');
-        register_setting('keks_pages', 'keks_show_imprint_link');
+        register_setting('keks_pages', 'keks_privacy_page_id', [
+            'sanitize_callback' => 'absint',
+        ]);
+        register_setting('keks_pages', 'keks_imprint_page_id', [
+            'sanitize_callback' => 'absint',
+        ]);
+        register_setting('keks_pages', 'keks_show_imprint_link', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
         register_setting('keks_pages', 'keks_excluded_pages', [
             'type' => 'array',
             'sanitize_callback' => [$this, 'sanitize_excluded_pages'],
         ]);
-        register_setting('keks_settings', 'keks_require_consent');
-        register_setting('keks_settings', 'keks_show_block_overlay');
-        register_setting('keks_settings', 'keks_require_consent_message');
+        register_setting('keks_settings', 'keks_require_consent', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+        register_setting('keks_settings', 'keks_show_block_overlay', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
+        register_setting('keks_settings', 'keks_require_consent_message', [
+            'sanitize_callback' => 'wp_kses_post',
+        ]);
 
         // Kategorien-Einstellungen
-        register_setting('keks_settings', 'keks_granular_mode');
+        register_setting('keks_settings', 'keks_granular_mode', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
         register_setting('keks_settings', 'keks_enabled_categories', [
             'type' => 'array',
             'sanitize_callback' => [$this, 'sanitize_enabled_categories'],
@@ -845,8 +872,12 @@ class Keks {
 
         // Kategorie-Namen und Beschreibungen
         foreach ($this->default_categories as $key => $category) {
-            register_setting('keks_settings', "keks_category_{$key}_name");
-            register_setting('keks_settings', "keks_category_{$key}_desc");
+            register_setting('keks_settings', "keks_category_{$key}_name", [
+                'sanitize_callback' => 'sanitize_text_field',
+            ]);
+            register_setting('keks_settings', "keks_category_{$key}_desc", [
+                'sanitize_callback' => 'wp_kses_post',
+            ]);
         }
 
         // Verwaltete Scripts (eigene Gruppe, um Datenverlust zu vermeiden)
@@ -857,10 +888,14 @@ class Keks {
         ]);
 
         // Google Consent Mode v2
-        register_setting('keks_settings', 'keks_google_consent_mode');
+        register_setting('keks_settings', 'keks_google_consent_mode', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
 
         // IP-Speicherung (Hash oder Klartext)
-        register_setting('keks_settings', 'keks_ip_hash_only');
+        register_setting('keks_settings', 'keks_ip_hash_only', [
+            'sanitize_callback' => 'sanitize_text_field',
+        ]);
     }
 
     public function sanitize_enabled_categories($input) {
@@ -978,9 +1013,9 @@ class Keks {
             <div class="notice notice-info" style="margin: 15px 0;">
                 <p>
                     <strong><?php echo esc_html(keks_t('settings_tip')); ?></strong> <?php echo esc_html(keks_t('settings_tip_text')); ?>
-                    <a href="<?php echo admin_url('admin.php?page=keks-scripts'); ?>"><?php echo esc_html(keks_t('menu_scripts')); ?></a> |
-                    <a href="<?php echo admin_url('admin.php?page=keks-pages'); ?>"><?php echo esc_html(keks_t('menu_pages')); ?></a> |
-                    <a href="<?php echo admin_url('admin.php?page=keks-consent-log'); ?>"><?php echo esc_html(keks_t('menu_consent_log')); ?></a>
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=keks-scripts')); ?>"><?php echo esc_html(keks_t('menu_scripts')); ?></a> |
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=keks-pages')); ?>"><?php echo esc_html(keks_t('menu_pages')); ?></a> |
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=keks-consent-log')); ?>"><?php echo esc_html(keks_t('menu_consent_log')); ?></a>
                 </p>
             </div>
 
@@ -988,7 +1023,7 @@ class Keks {
                 <?php settings_fields('keks_settings'); ?>
 
                 <!-- Plugin Ein/Aus Schalter -->
-                <div style="background: <?php echo $plugin_enabled === '1' ? '#d4edda' : '#f8d7da'; ?>; border: 1px solid <?php echo $plugin_enabled === '1' ? '#c3e6cb' : '#f5c6cb'; ?>; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <div style="background: <?php echo esc_attr($plugin_enabled === '1' ? '#d4edda' : '#f8d7da'); ?>; border: 1px solid <?php echo esc_attr($plugin_enabled === '1' ? '#c3e6cb' : '#f5c6cb'); ?>; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
                     <label style="display: flex; align-items: center; gap: 15px; cursor: pointer;">
                         <input type="checkbox" name="keks_plugin_enabled" value="1"
                                <?php checked($plugin_enabled, '1'); ?>
@@ -996,7 +1031,7 @@ class Keks {
                         <span style="font-size: 16px; font-weight: 600;">
                             <?php echo esc_html(keks_t('settings_enable_banner')); ?>
                         </span>
-                        <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; background: <?php echo $plugin_enabled === '1' ? '#28a745' : '#dc3545'; ?>; color: #fff;">
+                        <span style="font-size: 12px; padding: 4px 10px; border-radius: 4px; background: <?php echo esc_attr($plugin_enabled === '1' ? '#28a745' : '#dc3545'); ?>; color: #fff;">
                             <?php echo $plugin_enabled === '1' ? esc_html(keks_t('settings_status_active')) : esc_html(keks_t('settings_status_inactive')); ?>
                         </span>
                     </label>
@@ -1033,7 +1068,7 @@ class Keks {
                                 $cat_name = !empty($cat_name_opt) ? $cat_name_opt : $category['name'];
                                 $cat_desc = !empty($cat_desc_opt) ? $cat_desc_opt : $category['description'];
                                 ?>
-                                <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid <?php echo $category['required'] ? '#00a32a' : '#2271b1'; ?>;">
+                                <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid <?php echo esc_attr($category['required'] ? '#00a32a' : '#2271b1'); ?>;">
                                     <label style="display: block; margin-bottom: 10px;">
                                         <input type="checkbox"
                                                name="keks_enabled_categories[]"
@@ -1165,7 +1200,7 @@ class Keks {
                         </tr>
                     </table>
                     <p style="margin: 10px 0 0; font-size: 12px; color: #666;">
-                        <?php echo keks_t('settings_gcm_auto_note'); ?>
+                        <?php echo esc_html(keks_t('settings_gcm_auto_note')); ?>
                     </p>
                 </div>
 
@@ -1336,7 +1371,7 @@ class Keks {
                     $category_name = $is_known ? ($category_labels[$service_info['category']] ?? keks_t('scripts_category_other')) : ($available_categories[$script['category']]['name'] ?? keks_t('scripts_category_statistics'));
                     $border_color = ($is_known && $service_info['category'] === 'marketing') ? '#d63638' : '#2271b1';
                     ?>
-                    <div class="keks-script-item" data-index="<?php echo esc_attr($index); ?>" data-service="<?php echo esc_attr($service_key); ?>" style="background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-left: 4px solid <?php echo $border_color; ?>;">
+                    <div class="keks-script-item" data-index="<?php echo esc_attr($index); ?>" data-service="<?php echo esc_attr($service_key); ?>" style="background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-left: 4px solid <?php echo esc_attr($border_color); ?>;">
                         <input type="hidden" name="keks_managed_scripts[<?php echo esc_attr($index); ?>][service]" value="<?php echo esc_attr($service_key); ?>">
 
                         <?php if ($is_known) : ?>
@@ -1344,7 +1379,7 @@ class Keks {
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                 <div>
                                     <strong style="font-size: 14px;"><?php echo esc_html($service_info['name']); ?></strong>
-                                    <span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 3px; margin-left: 8px; background: <?php echo $service_info['category'] === 'marketing' ? '#fce4e4' : '#e7f3ff'; ?>; color: <?php echo $service_info['category'] === 'marketing' ? '#8b0000' : '#0066cc'; ?>;">
+                                    <span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 3px; margin-left: 8px; background: <?php echo esc_attr($service_info['category'] === 'marketing' ? '#fce4e4' : '#e7f3ff'); ?>; color: <?php echo esc_attr($service_info['category'] === 'marketing' ? '#8b0000' : '#0066cc'); ?>;">
                                         <?php echo esc_html($category_name); ?>
                                     </span>
                                     <span style="display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 3px; margin-left: 4px; background: #f0f0f0; color: #666;">
@@ -1433,7 +1468,7 @@ class Keks {
                 var manager = document.getElementById('keks-scripts-manager');
                 var serviceSelect = document.getElementById('keks-service-select');
                 var addBtn = document.getElementById('keks-add-service');
-                var nextIndex = <?php echo max(count($managed_scripts), 0); ?>;
+                var nextIndex = <?php echo esc_js(max(count($managed_scripts), 0)); ?>;
                 var knownServices = <?php echo json_encode($known_services); ?>;
                 var categoryLabels = <?php echo json_encode($category_labels); ?>;
                 var availableCategories = <?php echo json_encode(array_filter($available_categories, function($cat) { return !$cat['required']; })); ?>;
@@ -1702,48 +1737,58 @@ class Keks {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'keks_consent_log';
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table'") === $table;
+        $table_name = 'keks_consent_log';
+        $table = $wpdb->prefix . $table_name;
+        $table_escaped = esc_sql($table);
+        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table)) === $table;
         $ip_hash_only = get_option('keks_ip_hash_only', '0') === '1';
         $ip_column_label = $ip_hash_only ? keks_t('log_column_ip_hash') : keks_t('log_column_ip_address');
 
         // Pagination
         $per_page = 50;
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         $current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
         $offset = ($current_page - 1) * $per_page;
 
         // Filter
-        $filter_action = isset($_GET['filter_action']) ? sanitize_key($_GET['filter_action']) : '';
-        $filter_date = isset($_GET['filter_date']) ? sanitize_text_field($_GET['filter_date']) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $filter_action = isset($_GET['filter_action']) ? sanitize_key(wp_unslash($_GET['filter_action'])) : '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $filter_date = isset($_GET['filter_date']) ? sanitize_text_field(wp_unslash($_GET['filter_date'])) : '';
 
         // Daten laden
         $entries = [];
         $total = 0;
 
         if ($table_exists) {
-            $where = "1=1";
+            $where_clause = '1=1';
             $where_args = [];
 
             if ($filter_action) {
-                $where .= " AND action = %s";
+                $where_clause .= ' AND action = %s';
                 $where_args[] = $filter_action;
             }
 
             if ($filter_date) {
-                $where .= " AND DATE(created_at) = %s";
+                $where_clause .= ' AND DATE(created_at) = %s';
                 $where_args[] = $filter_date;
             }
 
-            $count_sql = "SELECT COUNT(*) FROM $table WHERE $where";
+            // Count query - Tabellennamen sind bereits escaped
+            $count_sql = "SELECT COUNT(*) FROM `{$table_escaped}` WHERE {$where_clause}";
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             if (!empty($where_args)) {
-                $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, $where_args));
+                $total = (int) $wpdb->get_var($wpdb->prepare($count_sql, ...$where_args));
             } else {
+                // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
                 $total = (int) $wpdb->get_var($count_sql);
             }
 
-            $sql = "SELECT * FROM $table WHERE $where ORDER BY created_at DESC LIMIT %d OFFSET %d";
-            $args = array_merge($where_args, [$per_page, $offset]);
-            $entries = $wpdb->get_results($wpdb->prepare($sql, $args));
+            // Select query - Tabellennamen sind bereits escaped
+            $sql = "SELECT * FROM `{$table_escaped}` WHERE {$where_clause} ORDER BY created_at DESC LIMIT %d OFFSET %d";
+            $all_args = array_merge($where_args, [$per_page, $offset]);
+            // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $entries = $wpdb->get_results($wpdb->prepare($sql, ...$all_args));
         }
 
         $total_pages = ceil($total / $per_page);
@@ -1755,14 +1800,15 @@ class Keks {
         }
 
         // Löschen alter Einträge
-        if (isset($_POST['delete_old']) && wp_verify_nonce($_POST['_wpnonce'], 'keks_delete_old_logs')) {
-            $days = intval($_POST['delete_days']);
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        if (isset($_POST['delete_old']) && isset($_POST['_wpnonce']) && wp_verify_nonce(wp_unslash($_POST['_wpnonce']), 'keks_delete_old_logs')) {
+            $days = isset($_POST['delete_days']) ? intval(wp_unslash($_POST['delete_days'])) : 0;
             if ($days > 0 && $table_exists) {
                 $deleted = $wpdb->query($wpdb->prepare(
-                    "DELETE FROM $table WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+                    "DELETE FROM `{$table_escaped}` WHERE created_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
                     $days
                 ));
-                echo '<div class="notice notice-success"><p>' . sprintf(keks_t('log_entries_deleted'), $deleted) . '</p></div>';
+                echo '<div class="notice notice-success"><p>' . esc_html(sprintf(keks_t('log_entries_deleted'), $deleted)) . '</p></div>';
             }
         }
         ?>
@@ -1788,12 +1834,12 @@ class Keks {
                         <input type="date" name="filter_date" value="<?php echo esc_attr($filter_date); ?>">
                         <button type="submit" class="button"><?php echo esc_html(keks_t('log_filter_button')); ?></button>
                         <?php if ($filter_action || $filter_date) : ?>
-                            <a href="<?php echo admin_url('admin.php?page=keks-consent-log'); ?>" class="button"><?php echo esc_html(keks_t('log_reset_button')); ?></a>
+                            <a href="<?php echo esc_url(admin_url('admin.php?page=keks-consent-log')); ?>" class="button"><?php echo esc_html(keks_t('log_reset_button')); ?></a>
                         <?php endif; ?>
                     </form>
 
                     <div style="margin-left: auto; display: flex; gap: 10px;">
-                        <a href="<?php echo admin_url('admin.php?page=keks-consent-log&export=csv'); ?>" class="button"><?php echo esc_html(keks_t('log_export_csv')); ?></a>
+                        <a href="<?php echo esc_url(admin_url('admin.php?page=keks-consent-log&export=csv')); ?>" class="button"><?php echo esc_html(keks_t('log_export_csv')); ?></a>
                     </div>
                 </div>
 
@@ -1846,10 +1892,10 @@ class Keks {
                                             'custom' => '<span style="color:#dba617;">' . esc_html(keks_t('log_action_custom')) . '</span>',
                                             'revoke' => '<span style="color:#666;">' . esc_html(keks_t('log_action_revoke')) . '</span>',
                                         ];
-                                        echo $action_labels[$entry->action] ?? esc_html($entry->action);
+                                        echo wp_kses_post($action_labels[$entry->action] ?? esc_html($entry->action));
                                         ?>
                                     </td>
-                                    <td><?php echo implode(' ', $cat_labels); ?></td>
+                                    <td><?php echo wp_kses_post(implode(' ', $cat_labels)); ?></td>
                                     <td><?php echo esc_html($entry->ip_address ?? '-'); ?></td>
                                     <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php echo esc_attr($entry->url); ?>">
                                         <?php echo esc_html($entry->url ?: '-'); ?>
@@ -1864,7 +1910,7 @@ class Keks {
                 <?php if ($total_pages > 1) : ?>
                     <div class="tablenav bottom">
                         <div class="tablenav-pages">
-                            <span class="displaying-num"><?php echo number_format_i18n($total); ?> <?php echo esc_html(keks_t('log_entries')); ?></span>
+                            <span class="displaying-num"><?php echo esc_html(number_format_i18n($total)); ?> <?php echo esc_html(keks_t('log_entries')); ?></span>
                             <span class="pagination-links">
                                 <?php
                                 $base_url = admin_url('admin.php?page=keks-consent-log');
@@ -1878,9 +1924,9 @@ class Keks {
                                 <?php endif; ?>
 
                                 <span class="paging-input">
-                                    <span class="current-page"><?php echo $current_page; ?></span>
+                                    <span class="current-page"><?php echo esc_html($current_page); ?></span>
                                     <?php echo esc_html(keks_t('log_of')); ?>
-                                    <span class="total-pages"><?php echo $total_pages; ?></span>
+                                    <span class="total-pages"><?php echo esc_html($total_pages); ?></span>
                                 </span>
 
                                 <?php if ($current_page < $total_pages) : ?>
@@ -1914,14 +1960,16 @@ class Keks {
      */
     private function export_consent_log_csv() {
         global $wpdb;
-        $table = $wpdb->prefix . 'keks_consent_log';
+        $table_name = 'keks_consent_log';
+        $table = $wpdb->prefix . $table_name;
+        $table_escaped = esc_sql($table);
         $ip_hash_only = get_option('keks_ip_hash_only', '0') === '1';
         $ip_column_label = $ip_hash_only ? keks_t('log_column_ip_hash') : keks_t('log_column_ip_address');
 
-        $entries = $wpdb->get_results("SELECT * FROM $table ORDER BY created_at DESC");
+        $entries = $wpdb->get_results("SELECT * FROM `{$table_escaped}` ORDER BY created_at DESC");
 
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=keks-consent-log-' . date('Y-m-d') . '.csv');
+        header('Content-Disposition: attachment; filename=keks-consent-log-' . gmdate('Y-m-d') . '.csv');
 
         $output = fopen('php://output', 'w');
 
@@ -1944,6 +1992,7 @@ class Keks {
             ], ';');
         }
 
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
         fclose($output);
         exit;
     }
@@ -2126,6 +2175,7 @@ class Keks {
                 // Ist es ein Iframe?
                 if (!empty($service['is_iframe'])) {
                     $iframe_url = str_replace('{ID}', $id, $service['iframe_template']);
+                    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     echo keks_iframe($category, $iframe_url, ['width' => '100%', 'height' => '400', 'frameborder' => '0']) . "\n";
                     continue;
                 }
@@ -2140,10 +2190,12 @@ class Keks {
                             // Zusätzliche Attribute?
                             $extra_attrs = '';
                             if (!empty($tpl['attrs'])) {
-                                $extra_attrs = ' ' . str_replace('{ID}', esc_attr($id), $tpl['attrs']);
+                                $extra_attrs = ' ' . str_replace('{ID}', esc_attr($id), esc_attr($tpl['attrs']));
                             }
-                            echo '<script type="text/plain" data-keks-category="' . esc_attr($category) . '" src="' . esc_url($content) . '"' . $extra_attrs . '></script>' . "\n";
+                            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                            echo '<script type="text/plain" data-keks-category="' . esc_attr($category) . '" src="' . esc_url($content) . '"' . esc_attr($extra_attrs) . '></script>' . "\n";
                         } else {
+                            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                             echo keks_script($category, '', $content) . "\n";
                         }
                     }
@@ -2163,8 +2215,10 @@ class Keks {
                 $category = $script['category'] ?? 'statistics';
 
                 if (($script['type'] ?? 'url') === 'url') {
+                    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     echo keks_script($category, $script['content']) . "\n";
                 } else {
+                    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
                     echo keks_script($category, '', $script['content']) . "\n";
                 }
             }

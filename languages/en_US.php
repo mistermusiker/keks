@@ -4,6 +4,10 @@
  * This is the default language file
  */
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 return [
     // ===========================================
     // Plugin Header
