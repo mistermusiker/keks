@@ -92,6 +92,19 @@
          * Bind event listeners
          */
         bindEvents: function() {
+            // Enter key triggers "Accept All" when banner is visible
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const banner = document.getElementById('keks-banner');
+                    if (banner && banner.classList.contains('keks-visible')) {
+                        const acceptBtn = banner.querySelector('.keks-btn-accept');
+                        if (acceptBtn) {
+                            acceptBtn.click();
+                        }
+                    }
+                }
+            });
+
             document.addEventListener('click', (e) => {
                 // Accept all
                 if (e.target.classList.contains('keks-btn-accept')) {
