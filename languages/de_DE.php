@@ -4,6 +4,10 @@
  * Diese Datei enthält alle deutschen Übersetzungen
  */
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 return [
     // ===========================================
     // Plugin Header

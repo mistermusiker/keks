@@ -1,8 +1,9 @@
 === Keks - DSGVO/GDPR Cookie Banner ===
-Contributors: onegiantleap
-Tags: cookie, gdpr, dsgvo, consent, banner, privacy, cookie-banner, cookie-consent, google-consent-mode
+Contributors: mistermusiker
+Author: Roger Kirchhoff
+Tags: cookie, dsgvo, gdpr, consent, banner, google-consent-mode
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.9
 Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -59,6 +60,7 @@ Yes. Keks follows GDPR principles:
 - Granular consent options
 - Easy consent withdrawal
 - Consent logging for compliance proof
+- Privacy ind imprint page can be viewed without any cookie
 
 = How do I add Google Analytics? =
 

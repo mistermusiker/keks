@@ -65,8 +65,10 @@ foreach ($options_to_delete as $option) {
 /**
  * Drop custom database table
  */
-$table_name = $wpdb->prefix . 'keks_consent_log';
-$wpdb->query("DROP TABLE IF EXISTS {$table_name}");
+$table_name = 'keks_consent_log';
+$table = $wpdb->prefix . $table_name;
+$table_escaped = esc_sql($table);
+$wpdb->query("DROP TABLE IF EXISTS `{$table_escaped}`");
 
 /**
  * Delete all post meta created by the plugin
@@ -94,8 +96,10 @@ if (is_multisite()) {
         }
 
         // Drop table for this site
-        $table_name = $wpdb->prefix . 'keks_consent_log';
-        $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
+        $table_name = 'keks_consent_log';
+        $table = $wpdb->prefix . $table_name;
+        $table_escaped = esc_sql($table);
+        $wpdb->query("DROP TABLE IF EXISTS `{$table_escaped}`");
 
         // Delete post meta
         $wpdb->query("DELETE FROM {$wpdb->postmeta} WHERE meta_key = '_keks_hide_banner'");
