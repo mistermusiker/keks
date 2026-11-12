@@ -32,6 +32,7 @@
                 this.categories = keksConfig.categories || {};
                 this.granularMode = keksConfig.granularMode !== false;
                 this.strings = keksConfig.strings || {};
+                this.colorScheme = keksConfig.colorScheme || 'auto';
             }
 
             const consent = this.getConsent();
@@ -264,6 +265,7 @@
             const overlay = document.createElement('div');
             overlay.id = 'keks-block-overlay';
             overlay.className = 'keks-block-overlay';
+            overlay.setAttribute('data-keks-scheme', this.colorScheme || 'auto');
 
             const message = (typeof keksConfig !== 'undefined' && keksConfig.requireConsentMessage)
                 ? keksConfig.requireConsentMessage
@@ -307,6 +309,7 @@
                 const blocker = document.createElement('div');
                 blocker.id = 'keks-page-blocker';
                 blocker.className = 'keks-page-blocker';
+                blocker.setAttribute('data-keks-scheme', this.colorScheme || 'auto');
                 document.body.appendChild(blocker);
             }
         },

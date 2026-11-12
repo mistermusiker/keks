@@ -115,6 +115,14 @@ return [
     'settings_banner_text' => 'Banner Text',
     'settings_banner_text_desc' => 'The text shown in the cookie banner.',
 
+    // Appearance Section
+    'settings_appearance_title' => 'Appearance',
+    'settings_color_scheme' => 'Color scheme',
+    'settings_color_scheme_auto' => 'Automatic (follows the visitor\'s device)',
+    'settings_color_scheme_light' => 'Light',
+    'settings_color_scheme_dark' => 'Dark',
+    'settings_color_scheme_desc' => 'Automatic uses the light/dark setting of the device. Light or Dark fix the scheme regardless of the device.',
+
     // Consent Required Section
     'settings_consent_required' => 'Consent Required',
     'settings_block_mode' => 'Blocking Mode',
