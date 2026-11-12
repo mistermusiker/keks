@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build or update, e.g. v1.1.0'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,27 +17,36 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Build plugin ZIP
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${TAG#v}"
           mkdir -p build/keks
           rsync -a \
             --exclude='.git' --exclude='.github' --exclude='.gitignore' \
-            --exclude='.DS_Store' \
+            --exclude='.DS_Store' --exclude='docs' --exclude='history.txt' \
             --exclude='GITHUB_SETUP.md' --exclude='README.md' --exclude='build' \
             ./ build/keks/
           cd build && zip -r "keks-${VERSION}.zip" keks
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          gh release create "${GITHUB_REF_NAME}" \
-            "build/keks-${VERSION}.zip" \
-            --title "Keks ${VERSION}" \
-            --notes "Keks Cookie Banner ${VERSION}. ZIP über WordPress → Plugins → Installieren → Plugin hochladen einspielen."
+          VERSION="${TAG#v}"
+          NOTES="Keks Cookie Banner ${VERSION}. Install the ZIP in WordPress under Plugins > Add New > Upload Plugin, or replace the plugin folder of an existing installation. The changelog is in readme.txt."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "Keks ${VERSION}" --notes "$NOTES"
+            if ! gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx "keks-${VERSION}.zip"; then
+              gh release upload "$TAG" "build/keks-${VERSION}.zip"
+            fi
+          else
+            gh release create "$TAG" "build/keks-${VERSION}.zip" --title "Keks ${VERSION}" --notes "$NOTES"
+          fi

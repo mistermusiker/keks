@@ -1,0 +1,66 @@
+Keks Changelog
+==============
+
+2026-11-12 (Nachtrag zu 1.1.0: Release-Text auf Englisch, history.txt)
+----------
+Ziel: Das Release auf GitHub bekommt einen englischen Text, und das Projekt bekommt diese
+Datei als Änderungsverlauf.
+
+- .github/workflows/release.yml: Release-Text auf Englisch. Der Workflow lässt sich auch von
+  Hand über "Run workflow" mit einem bestehenden Tag starten und aktualisiert dann Titel und
+  Text des vorhandenen Releases (das ZIP wird nur hochgeladen, wenn es fehlt). docs/ und
+  history.txt bleiben aus dem Plugin-ZIP draußen.
+- history.txt: neu, Einträge rückwirkend für 1.0.0 und 1.1.0.
+
+2026-11-12 (Version 1.1.0: Farbschema hell, dunkel, automatisch; Sprach-Fallback)
+----------
+Ziel: Der Banner folgt der Hell/Dunkel-Einstellung des Besuchergeräts, mit Einstellung im
+Admin. Deutsche Texte auch für Sites mit "Deutsch (Sie)", de_AT und de_CH.
+
+Farbschema
+- keks.php: Option keks_color_scheme (auto, light, dark; Standard auto) mit
+  sanitize_color_scheme() und get_color_scheme(); Abschnitt "Darstellung" mit Dropdown
+  "Farbschema" auf der Einstellungsseite zwischen "Banner-Inhalt" und "Zustimmung
+  erforderlich"; colorScheme in keksConfig; Version 1.1.0.
+- assets/css/banner.css: alle Farben als Variablen --keks-*, Hell-Werte unverändert. Dunkle
+  Palette (neutrales Grau, Textkontrast mindestens 4,5:1) einmal für data-keks-scheme="dark"
+  und einmal unter prefers-color-scheme: dark für "auto", jeweils mit color-scheme: dark. Der
+  Haken der Pflicht-Checkbox ist im Dunkelmodus dunkel auf Grün.
+- templates/banner.php: Wurzelelement trägt data-keks-scheme.
+- assets/js/banner.js: Blockier-Overlay und Seitenblocker bekommen dasselbe Attribut.
+- languages/de_DE.php, languages/en_US.php: Schlüssel settings_appearance_title,
+  settings_color_scheme, settings_color_scheme_auto, settings_color_scheme_light,
+  settings_color_scheme_dark, settings_color_scheme_desc.
+- uninstall.php: keks_color_scheme wird beim Deinstallieren gelöscht.
+
+Sprach-Fallback
+- keks.php keks_t(): Reihenfolge exaktes Locale, dann Sprache_REGION (de_DE_formal -> de_DE),
+  dann eine andere Datei derselben Sprache (de_AT, de_CH -> de_DE), zuletzt en_US. Der
+  Locale-Name wird vor dem Laden geprüft (nur Buchstaben und Unterstriche).
+
+Sonstiges
+- readme.txt: Stable tag 1.1.0, Changelog und Upgrade Notice. README.md: Feature "Light and
+  Dark Mode".
+- Vorschau zum Kommentieren unter docs/vorschau-farbschema-v01.html (nicht im Repo).
+- Test auf fakedos.de/sework: Automatisch, Hell und Dunkel jeweils mit hellem und dunklem
+  Gerät geprüft, Einstellung im Admin gespeichert und zurückgesetzt.
+
+2026-06-21 (Version 1.0.0: Sicherheits-Härtung, Metadaten, Release-Workflow)
+----------
+- keks.php: Datenbankabfragen mit esc_sql und wpdb->prepare, Nonce-Bereinigung, Plugin- und
+  Autor-Metadaten.
+- readme.txt: Stable tag auf 1.0.0 angeglichen.
+- .github/workflows/release.yml: GitHub Action baut bei Push eines v*-Tags das Plugin-ZIP und
+  hängt es an ein Release.
+- assets/js/banner.js, languages/de_DE.php, languages/en_US.php, uninstall.php: kleinere
+  Anpassungen aus derselben Fassung.
+
+2026-01-13 (Version 1.0.0: erste Fassung auf GitHub)
+----------
+- Cookie-Banner mit granularer Zustimmung (Notwendig, Statistik, Marketing), alle Buttons
+  gleichwertig gestaltet (keine Dark Patterns).
+- Google Consent Mode v2, über 30 vorkonfigurierte Dienste, Consent-Log in der Datenbank als
+  DSGVO-Nachweis, keine Cookies vor der Zustimmung (localStorage).
+- Deutsch und Englisch (languages/de_DE.php, languages/en_US.php), Seitenausnahmen für
+  Datenschutz und Impressum, Shortcode [keks_revoke] für den Widerruf.
+- README.md ergänzt.
