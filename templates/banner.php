@@ -19,7 +19,7 @@ $imprint_url = $imprint_page_id ? get_permalink($imprint_page_id) : '';
 $imprint_title = $imprint_page_id ? get_the_title($imprint_page_id) : '';
 $require_consent = get_option('keks_require_consent', '1') === '1';
 ?>
-<div id="keks-banner" class="keks-banner keks-hidden" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr(keks_t('banner_aria_label')); ?>">
+<div id="keks-banner" class="keks-banner keks-hidden" data-keks-scheme="<?php echo esc_attr(keks()->get_color_scheme()); ?>" role="dialog" aria-modal="true" aria-label="<?php echo esc_attr(keks_t('banner_aria_label')); ?>">
     <div class="keks-container">
         <div class="keks-content">
             <div class="keks-text">

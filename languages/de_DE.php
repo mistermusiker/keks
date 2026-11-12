@@ -115,6 +115,14 @@ return [
     'settings_banner_text' => 'Banner-Text',
     'settings_banner_text_desc' => 'Der Text, der im Cookie-Banner angezeigt wird.',
 
+    // Appearance Section
+    'settings_appearance_title' => 'Darstellung',
+    'settings_color_scheme' => 'Farbschema',
+    'settings_color_scheme_auto' => 'Automatisch (wie das Gerät des Besuchers)',
+    'settings_color_scheme_light' => 'Hell',
+    'settings_color_scheme_dark' => 'Dunkel',
+    'settings_color_scheme_desc' => 'Automatisch übernimmt die Hell/Dunkel-Einstellung des Geräts. Hell oder Dunkel legen das Schema fest, unabhängig vom Gerät.',
+
     // Consent Required Section
     'settings_consent_required' => 'Zustimmung erforderlich',
     'settings_block_mode' => 'Blockier-Modus',

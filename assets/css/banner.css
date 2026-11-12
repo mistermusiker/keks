@@ -1,7 +1,125 @@
 /**
  * Keks Cookie Banner Styles
  * DSGVO-konform: Alle Buttons gleichwertig gestaltet (keine Dark Patterns)
+ *
+ * Farbschema: Alle Farben sind Variablen (--keks-*). Das Wurzelelement von Banner,
+ * Blockier-Overlay und Seitenblocker trägt data-keks-scheme="auto|light|dark".
+ * "auto" folgt der Hell/Dunkel-Einstellung des Geräts (prefers-color-scheme),
+ * "light" und "dark" erzwingen das Schema unabhängig vom Gerät.
  */
+
+/* Hell (Standardwerte, gelten auch ohne Attribut) */
+.keks-banner,
+.keks-block-overlay,
+.keks-page-blocker,
+[data-keks-scheme] {
+    color-scheme: light;
+    --keks-bg: #ffffff;
+    --keks-text: #333;
+    --keks-text-muted: #666;
+    --keks-shadow: rgba(0, 0, 0, 0.15);
+    --keks-category-bg: #f8f9fa;
+    --keks-category-border: #e9ecef;
+    --keks-category-hover: #e9ecef;
+    --keks-required-bg: #e8f5e9;
+    --keks-required-border: #c8e6c9;
+    --keks-required-hover: #c8e6c9;
+    --keks-checkbox-border: #666;
+    --keks-checkbox-checked: #333;
+    --keks-checkbox-check: #fff;
+    --keks-checkbox-required: #4caf50;
+    --keks-checkbox-required-check: #fff;
+    --keks-badge-text: #2e7d32;
+    --keks-badge-bg: #c8e6c9;
+    --keks-link: #0066cc;
+    --keks-link-hover: #004499;
+    --keks-separator: #999;
+    --keks-btn-border: #333;
+    --keks-btn-accept-bg: #333;
+    --keks-btn-accept-text: #fff;
+    --keks-btn-accept-hover: #555;
+    --keks-btn-secondary-bg: #fff;
+    --keks-btn-secondary-text: #333;
+    --keks-btn-secondary-hover: #f5f5f5;
+    --keks-overlay-bg: rgba(0, 0, 0, 0.85);
+    --keks-modal-bg: #fff;
+    --keks-modal-shadow: rgba(0, 0, 0, 0.3);
+    --keks-blocker-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Dunkel (erzwungen über die Einstellung) */
+[data-keks-scheme="dark"] {
+    color-scheme: dark;
+    --keks-bg: #1e1e1e;
+    --keks-text: #e8e8e8;
+    --keks-text-muted: #a0a0a0;
+    --keks-shadow: rgba(0, 0, 0, 0.6);
+    --keks-category-bg: #2a2a2a;
+    --keks-category-border: #3a3a3a;
+    --keks-category-hover: #333333;
+    --keks-required-bg: #1f3322;
+    --keks-required-border: #2e5234;
+    --keks-required-hover: #27462c;
+    --keks-checkbox-border: #9a9a9a;
+    --keks-checkbox-checked: #e8e8e8;
+    --keks-checkbox-check: #1e1e1e;
+    --keks-checkbox-required: #4caf50;
+    --keks-checkbox-required-check: #1e1e1e;
+    --keks-badge-text: #a5d6a7;
+    --keks-badge-bg: #2e5234;
+    --keks-link: #8ab4f8;
+    --keks-link-hover: #aecbfa;
+    --keks-separator: #777;
+    --keks-btn-border: #e8e8e8;
+    --keks-btn-accept-bg: #e8e8e8;
+    --keks-btn-accept-text: #1e1e1e;
+    --keks-btn-accept-hover: #ffffff;
+    --keks-btn-secondary-bg: #1e1e1e;
+    --keks-btn-secondary-text: #e8e8e8;
+    --keks-btn-secondary-hover: #2a2a2a;
+    --keks-overlay-bg: rgba(0, 0, 0, 0.85);
+    --keks-modal-bg: #1e1e1e;
+    --keks-modal-shadow: rgba(0, 0, 0, 0.7);
+    --keks-blocker-bg: rgba(0, 0, 0, 0.5);
+}
+
+/* Dunkel (automatisch, wenn das Gerät des Besuchers dunkel eingestellt ist) */
+@media (prefers-color-scheme: dark) {
+    [data-keks-scheme="auto"] {
+        color-scheme: dark;
+        --keks-bg: #1e1e1e;
+        --keks-text: #e8e8e8;
+        --keks-text-muted: #a0a0a0;
+        --keks-shadow: rgba(0, 0, 0, 0.6);
+        --keks-category-bg: #2a2a2a;
+        --keks-category-border: #3a3a3a;
+        --keks-category-hover: #333333;
+        --keks-required-bg: #1f3322;
+        --keks-required-border: #2e5234;
+        --keks-required-hover: #27462c;
+        --keks-checkbox-border: #9a9a9a;
+        --keks-checkbox-checked: #e8e8e8;
+        --keks-checkbox-check: #1e1e1e;
+        --keks-checkbox-required: #4caf50;
+        --keks-checkbox-required-check: #1e1e1e;
+        --keks-badge-text: #a5d6a7;
+        --keks-badge-bg: #2e5234;
+        --keks-link: #8ab4f8;
+        --keks-link-hover: #aecbfa;
+        --keks-separator: #777;
+        --keks-btn-border: #e8e8e8;
+        --keks-btn-accept-bg: #e8e8e8;
+        --keks-btn-accept-text: #1e1e1e;
+        --keks-btn-accept-hover: #ffffff;
+        --keks-btn-secondary-bg: #1e1e1e;
+        --keks-btn-secondary-text: #e8e8e8;
+        --keks-btn-secondary-hover: #2a2a2a;
+        --keks-overlay-bg: rgba(0, 0, 0, 0.85);
+        --keks-modal-bg: #1e1e1e;
+        --keks-modal-shadow: rgba(0, 0, 0, 0.7);
+        --keks-blocker-bg: rgba(0, 0, 0, 0.5);
+    }
+}
 
 .keks-banner {
     position: fixed;
@@ -9,13 +127,13 @@
     left: 0;
     right: 0;
     z-index: 999999;
-    background: #ffffff;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    background: var(--keks-bg);
+    box-shadow: 0 -4px 20px var(--keks-shadow);
     padding: 20px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
     font-size: 14px;
     line-height: 1.5;
-    color: #333;
+    color: var(--keks-text);
     transform: translateY(100%);
     transition: transform 0.3s ease-in-out;
 }
@@ -64,8 +182,8 @@
     align-items: flex-start;
     gap: 10px;
     padding: 12px 16px;
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background: var(--keks-category-bg);
+    border: 1px solid var(--keks-category-border);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -75,16 +193,16 @@
 }
 
 .keks-category:hover {
-    background: #e9ecef;
+    background: var(--keks-category-hover);
 }
 
 .keks-category-required {
-    background: #e8f5e9;
-    border-color: #c8e6c9;
+    background: var(--keks-required-bg);
+    border-color: var(--keks-required-border);
 }
 
 .keks-category-required:hover {
-    background: #c8e6c9;
+    background: var(--keks-required-hover);
 }
 
 /* Custom Checkbox */
@@ -98,7 +216,7 @@
     width: 20px;
     height: 20px;
     min-width: 20px;
-    border: 2px solid #666;
+    border: 2px solid var(--keks-checkbox-border);
     border-radius: 4px;
     display: flex;
     align-items: center;
@@ -108,26 +226,26 @@
 }
 
 .keks-category input[type="checkbox"]:checked + .keks-category-checkbox {
-    background: #333;
-    border-color: #333;
+    background: var(--keks-checkbox-checked);
+    border-color: var(--keks-checkbox-checked);
 }
 
 .keks-category input[type="checkbox"]:checked + .keks-category-checkbox::after {
     content: "✓";
-    color: #fff;
+    color: var(--keks-checkbox-check);
     font-size: 14px;
     font-weight: bold;
 }
 
 .keks-category input[type="checkbox"]:disabled + .keks-category-checkbox {
-    background: #4caf50;
-    border-color: #4caf50;
+    background: var(--keks-checkbox-required);
+    border-color: var(--keks-checkbox-required);
     cursor: not-allowed;
 }
 
 .keks-category input[type="checkbox"]:disabled + .keks-category-checkbox::after {
     content: "✓";
-    color: #fff;
+    color: var(--keks-checkbox-required-check);
     font-size: 14px;
     font-weight: bold;
 }
@@ -141,15 +259,15 @@
 .keks-category-name {
     font-weight: 600;
     font-size: 14px;
-    color: #333;
+    color: var(--keks-text);
 }
 
 .keks-category-badge {
     display: inline-block;
     font-size: 10px;
     font-weight: 600;
-    color: #2e7d32;
-    background: #c8e6c9;
+    color: var(--keks-badge-text);
+    background: var(--keks-badge-bg);
     padding: 2px 6px;
     border-radius: 4px;
     margin-left: 6px;
@@ -158,7 +276,7 @@
 
 .keks-category-desc {
     font-size: 12px;
-    color: #666;
+    color: var(--keks-text-muted);
     line-height: 1.4;
 }
 
@@ -168,18 +286,18 @@
 }
 
 .keks-privacy-link {
-    color: #0066cc;
+    color: var(--keks-link);
     text-decoration: underline;
     font-size: 13px;
 }
 
 .keks-privacy-link:hover {
-    color: #004499;
+    color: var(--keks-link-hover);
 }
 
 .keks-link-separator {
     margin: 0 8px;
-    color: #999;
+    color: var(--keks-separator);
 }
 
 /* Buttons */
@@ -198,30 +316,30 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 2px solid #333;
+    border: 2px solid var(--keks-btn-border);
     text-align: center;
     white-space: nowrap;
 }
 
 .keks-btn-accept {
-    background: #333;
-    color: #fff;
+    background: var(--keks-btn-accept-bg);
+    color: var(--keks-btn-accept-text);
 }
 
 .keks-btn-accept:hover {
-    background: #555;
-    border-color: #555;
+    background: var(--keks-btn-accept-hover);
+    border-color: var(--keks-btn-accept-hover);
 }
 
 .keks-btn-reject,
 .keks-btn-save {
-    background: #fff;
-    color: #333;
+    background: var(--keks-btn-secondary-bg);
+    color: var(--keks-btn-secondary-text);
 }
 
 .keks-btn-reject:hover,
 .keks-btn-save:hover {
-    background: #f5f5f5;
+    background: var(--keks-btn-secondary-hover);
 }
 
 /* Mobile Anpassungen */
@@ -294,7 +412,7 @@
     right: 0;
     bottom: 0;
     z-index: 999998;
-    background: rgba(0, 0, 0, 0.85);
+    background: var(--keks-overlay-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -309,13 +427,13 @@
 }
 
 .keks-block-content {
-    background: #fff;
+    background: var(--keks-modal-bg);
     padding: 40px;
     border-radius: 12px;
     max-width: 500px;
     margin: 20px;
     text-align: center;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 40px var(--keks-modal-shadow);
 }
 
 .keks-block-icon {
@@ -326,14 +444,14 @@
 .keks-block-message {
     font-size: 18px;
     line-height: 1.6;
-    color: #333;
+    color: var(--keks-text);
     margin: 0 0 16px 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
 .keks-block-hint {
     font-size: 14px;
-    color: #666;
+    color: var(--keks-text-muted);
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
 }
@@ -368,5 +486,5 @@
     right: 0;
     bottom: 0;
     z-index: 999997;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--keks-blocker-bg);
 }

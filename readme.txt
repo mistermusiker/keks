@@ -4,7 +4,7 @@ Author: Roger Kirchhoff
 Tags: cookie, dsgvo, gdpr, consent, banner, google-consent-mode
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -105,6 +105,11 @@ Yes. Go to **Keks > Settings** and edit the banner text. You can also customize 
 
 == Changelog ==
 
+= 1.1.0 =
+* Color scheme setting: automatic (follows the visitor's device), light or dark
+* Dark palette for banner, blocking overlay and page blocker
+* German translation is now also used for de_DE_formal, de_AT and de_CH
+
 = 1.0.0 =
 * Initial release
 * Cookie banner with granular consent
@@ -116,6 +121,9 @@ Yes. Go to **Keks > Settings** and edit the banner text. You can also customize 
 * Shortcode for consent revocation
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds a color scheme setting (automatic, light, dark). The default is automatic, so visitors with a dark device setting now see a dark banner. Choose "Light" under Keks > Settings > Appearance to keep the previous look.
 
 = 1.0.0 =
 Initial release of Keks Cookie Banner.

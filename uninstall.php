@@ -27,6 +27,7 @@ $options_to_delete = [
     'keks_require_consent_message',
     'keks_granular_mode',
     'keks_enabled_categories',
+    'keks_color_scheme',
 
     // Page settings
     'keks_privacy_page_id',

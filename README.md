@@ -12,6 +12,7 @@ Simple, DSGVO/GDPR-compliant cookie banner without dark patterns. Supports Googl
 * **Consent Logging** - Database logging for GDPR compliance proof
 * **No Cookies Before Consent** - Uses localStorage until user decides
 * **Multilingual** - German and English included
+* **Light and Dark Mode** - Follows the visitor's device setting, or fixed to light or dark
 * **Lightweight** - No external dependencies
 
 ## Installation

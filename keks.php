@@ -3,7 +3,7 @@
  * Plugin Name: Keks - DSGVO/GDPR Cookie Banner
  * Plugin URI: https://github.com/mistermusiker/keks
  * Description: Simple, GDPR-compliant cookie banner without dark patterns.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Roger Kirchhoff
  * Author URI: https://grp.solutions
  * License: GPL v2 or later
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('KEKS_VERSION', '1.0.0');
+define('KEKS_VERSION', '1.1.0');
 define('KEKS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('KEKS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -30,18 +30,33 @@ function keks_t($key, $default = '') {
     static $translations = null;
 
     if ($translations === null) {
-        $locale = determine_locale();
-        $lang_file = KEKS_PLUGIN_DIR . 'languages/' . $locale . '.php';
+        $translations = [];
+        $lang_dir = KEKS_PLUGIN_DIR . 'languages/';
+        $locale = (string) determine_locale();
 
-        if (file_exists($lang_file)) {
-            $translations = include $lang_file;
-        } else {
-            // Fallback to English
-            $fallback_file = KEKS_PLUGIN_DIR . 'languages/en_US.php';
-            if (file_exists($fallback_file)) {
-                $translations = include $fallback_file;
-            } else {
-                $translations = [];
+        // Reihenfolge: exaktes Locale, dann Sprache_REGION (de_DE_formal -> de_DE),
+        // dann eine andere Datei derselben Sprache (de_AT, de_CH -> de_DE), zuletzt Englisch
+        $candidates = [];
+        if (preg_match('/^[a-z]{2,3}(_[A-Za-z]+)*$/', $locale)) {
+            $parts = explode('_', $locale);
+            $candidates[] = $locale;
+            if (count($parts) > 2) {
+                $candidates[] = $parts[0] . '_' . $parts[1];
+            }
+            foreach (glob($lang_dir . $parts[0] . '_*.php') ?: [] as $file) {
+                $candidates[] = basename($file, '.php');
+            }
+        }
+        $candidates[] = 'en_US';
+
+        foreach (array_unique($candidates) as $candidate) {
+            $lang_file = $lang_dir . $candidate . '.php';
+            if (file_exists($lang_file)) {
+                $loaded = include $lang_file;
+                if (is_array($loaded)) {
+                    $translations = $loaded;
+                    break;
+                }
             }
         }
     }
@@ -773,6 +788,7 @@ class Keks {
             'requireConsentMessage' => (($msg = get_option('keks_require_consent_message', '')) !== '') ? $msg : $this->get_default_require_message(),
             'categories' => $this->get_categories(),
             'granularMode' => get_option('keks_granular_mode', '1') === '1',
+            'colorScheme' => $this->get_color_scheme(),
             'shouldBlockPage' => $this->should_show_banner(),
             // AJAX for consent logging
             'ajaxUrl' => admin_url('admin-ajax.php'),
@@ -837,6 +853,12 @@ class Keks {
             'sanitize_callback' => 'wp_kses_post',
         ]);
 
+        // Farbschema des Banners (auto, light, dark)
+        register_setting('keks_settings', 'keks_color_scheme', [
+            'sanitize_callback' => [$this, 'sanitize_color_scheme'],
+            'default' => 'auto',
+        ]);
+
         // Seiten-Einstellungen (eigene Gruppe, um Datenverlust zu vermeiden)
         register_setting('keks_pages', 'keks_privacy_page_id', [
             'sanitize_callback' => 'absint',
@@ -896,6 +918,18 @@ class Keks {
         register_setting('keks_settings', 'keks_ip_hash_only', [
             'sanitize_callback' => 'sanitize_text_field',
         ]);
+    }
+
+    /**
+     * Farbschema: auto (folgt dem Gerät des Besuchers), light oder dark
+     */
+    public function sanitize_color_scheme($value) {
+        $value = is_string($value) ? strtolower(trim($value)) : '';
+        return in_array($value, ['auto', 'light', 'dark'], true) ? $value : 'auto';
+    }
+
+    public function get_color_scheme() {
+        return $this->sanitize_color_scheme(get_option('keks_color_scheme', 'auto'));
     }
 
     public function sanitize_enabled_categories($input) {
@@ -1112,6 +1146,25 @@ class Keks {
                             <textarea name="keks_banner_text" id="keks_banner_text"
                                       rows="4" cols="60"><?php echo esc_textarea($banner_text); ?></textarea>
                             <p class="description"><?php echo esc_html(keks_t('settings_banner_text_desc')); ?></p>
+                        </td>
+                    </tr>
+                </table>
+
+                <h2 class="title"><?php echo esc_html(keks_t('settings_appearance_title')); ?></h2>
+
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">
+                            <label for="keks_color_scheme"><?php echo esc_html(keks_t('settings_color_scheme')); ?></label>
+                        </th>
+                        <td>
+                            <?php $color_scheme = $this->get_color_scheme(); ?>
+                            <select name="keks_color_scheme" id="keks_color_scheme">
+                                <option value="auto" <?php selected($color_scheme, 'auto'); ?>><?php echo esc_html(keks_t('settings_color_scheme_auto')); ?></option>
+                                <option value="light" <?php selected($color_scheme, 'light'); ?>><?php echo esc_html(keks_t('settings_color_scheme_light')); ?></option>
+                                <option value="dark" <?php selected($color_scheme, 'dark'); ?>><?php echo esc_html(keks_t('settings_color_scheme_dark')); ?></option>
+                            </select>
+                            <p class="description"><?php echo esc_html(keks_t('settings_color_scheme_desc')); ?></p>
                         </td>
                     </tr>
                 </table>
